@@ -4,13 +4,11 @@ import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 
-import pprint
-
 
 class AmazonBot:
 
     def __init__(self, mongodb_client, server_smtp):
-        self.amazon_header =  {
+        self.amazon_header = {
             'authority': 'www.amazon.fr',
             'cache-control': 'max-age=0',
             'upgrade-insecure-requests': '1',
@@ -27,6 +25,12 @@ class AmazonBot:
         self.server_smtp = server_smtp
         # Ajouter ici le chemin vers chromedriver
         self.driver = webdriver.Chrome(executable_path="")
+        # ou bien autre astuce faites un pip install webdriver-manager
+        # et a la place du chemin mettez ChromeDriverManager().install()
+        # si vous preferez la seconde solution enlever les commentaires des deux prochaines lignes
+        # et commentez la ligne 29
+        # from webdriver_manager.chrome import ChromeDriverManager
+        # self.driver = webdriver.Chrome(executable_path=ChromeDriverManager().install())
 
     def get_product_title(self, soup):
         try:
@@ -51,14 +55,14 @@ class AmazonBot:
 
     def get_product_price(self, soup):
         try:
-            price = soup.find('span', {'id': 'priceblock_ourprice'}).get_text().strip()
-            return float(price.split()[0].replace(',', '.'))
+            price = soup.find('span', {
+                'class': 'a-price a-text-price header-price a-size-base a-text-normal',
+                'data-a-color': 'price'})\
+                .find('span', {'class': 'a-offscreen'})\
+                .get_text().strip()
+            return float(price.strip().replace(',', '.')[:-1])
         except:
-            try:
-                price = soup.find('span', {'class': 'a-size-medium a-color-price offer-price a-text-normal'}).get_text().strip()
-                return float(price.split()[0].replace(',', '.'))
-            except:
-                return None
+            return None
 
     def get_product_data(self, product_url):
         self.driver.get(product_url)
@@ -150,3 +154,5 @@ class AmazonBot:
                             message = message.encode("utf-8")
                             # Ajouter l'email d'envoi et de réception du message
                             self.server_smtp.sendmail("", "", message)
+            # pause de 2 secondes
+            time.sleep(2)
